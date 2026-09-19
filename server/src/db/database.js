@@ -2,7 +2,10 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const dbPath = path.resolve(__dirname, '../../data/finance.db');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const dbPath = isVercel
+  ? path.join('/tmp', 'finance.db')
+  : path.resolve(__dirname, '../../data/finance.db');
 const dataDir = path.dirname(dbPath);
 
 if (!fs.existsSync(dataDir)) {

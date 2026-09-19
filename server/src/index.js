@@ -38,18 +38,34 @@ app.get('/api/ping', (req, res) => {
 });
 
 // Startup & Auto-seed
-const startServer = async () => {
-  try {
-    await initSchema();
-    await seedData();
-
-    app.listen(PORT, () => {
-      console.log(` FinAI Platform Backend running on http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    console.error('Failed to start server:', err);
-    process.exit(1);
+let initialized = false;
+const ensureInitialized = async () => {
+  if (!initialized) {
+    try {
+      await initSchema();
+      await seedData();
+      initialized = true;
+    } catch (err) {
+      console.error('Database initialization error:', err);
+    }
   }
 };
 
-startServer();
+if (!process.env.VERCEL) {
+  ensureInitialized().then(() => {
+    app.listen(PORT, () => {
+      console.log(` FinAI Platform Backend running on http://localhost:${PORT}`);
+    });
+  }).catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+} else {
+  // On Vercel serverless, ensure database is initialized on incoming requests
+  app.use(async (req, res, next) => {
+    await ensureInitialized();
+    next();
+  });
+}
+
+module.exports = app;

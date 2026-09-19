@@ -12,6 +12,12 @@
     "seed": "node server/src/db/seed.js"
   },
   "dependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.4.0",
+    "sqlite3": "^6.0.1",
+    "uuid": "^14.0.2"
   }
 }
