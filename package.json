@@ -1,0 +1,15 @@
+{
+  "name": "finai-platform",
+  "version": "1.0.0",
+  "description": "AI-Powered Personal Finance Platform",
+  "scripts": {
+    "server": "node server/src/index.js",
+    "client": "npm --prefix client run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "npm --prefix client run build",
+    "seed": "node server/src/db/seed.js"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
