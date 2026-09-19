@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "AI-Powered Personal Finance Platform",
   "scripts": {
+    "postinstall": "npm --prefix server install && npm --prefix client install",
+    "install-all": "npm install && npm --prefix server install && npm --prefix client install",
     "server": "node server/src/index.js",
     "client": "npm --prefix client run dev",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
