@@ -12,7 +12,8 @@ import {
   Calendar,
   Download,
   Sliders,
-  Landmark
+  Landmark,
+  Database
 } from 'lucide-react';
 
 import Navbar from './components/Navbar';
@@ -128,18 +129,12 @@ export default function App() {
     };
   }, [summary, filteredTransactions, dateRange]);
 
+  const [serverError, setServerError] = useState(false);
+
   // Load all data
   const loadAllData = useCallback(async () => {
     try {
-      const [
-        healthRes,
-        summaryRes,
-        txRes,
-        budgetRes,
-        subRes,
-        goalsRes,
-        insightsRes
-      ] = await Promise.all([
+      const results = await Promise.allSettled([
         api.getFinancialHealth(),
         api.getTransactionSummary(),
         api.getTransactions(),
@@ -149,22 +144,49 @@ export default function App() {
         api.getInsights()
       ]);
 
-      if (healthRes.success) setHealth(healthRes.data);
-      if (summaryRes.success) setSummary(summaryRes.data);
-      if (txRes.success) setTransactions(txRes.data);
-      if (budgetRes.success) setBudgets(budgetRes.data);
-      if (subRes.success) {
-        setSubscriptions(subRes.data);
+      const [
+        healthRes,
+        summaryRes,
+        txRes,
+        budgetRes,
+        subRes,
+        goalsRes,
+        insightsRes
+      ] = results.map(r => r.status === 'fulfilled' ? r.value : { success: false });
+
+      if (healthRes?.success) setHealth(healthRes.data);
+      if (summaryRes?.success) setSummary(summaryRes.data);
+      if (txRes?.success) setTransactions(txRes.data || []);
+      if (budgetRes?.success) setBudgets(budgetRes.data || []);
+      if (subRes?.success) {
+        setSubscriptions(subRes.data || []);
         setSubStats(subRes.stats || {});
       }
-      if (goalsRes.success) setGoals(goalsRes.data);
-      if (insightsRes.success) setInsights(insightsRes.data);
+      if (goalsRes?.success) setGoals(goalsRes.data || []);
+      if (insightsRes?.success) setInsights(insightsRes.data || []);
+
+      const anySuccess = results.some(r => r.status === 'fulfilled' && r.value?.success);
+      setServerError(!anySuccess);
     } catch (err) {
       console.error('Error loading finance platform data:', err);
+      setServerError(true);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleLoadDemoData = async () => {
+    try {
+      const res = await api.reseedData();
+      if (res.success) {
+        addToast({ title: 'Sample Data Loaded', message: 'Restored 22 transactions and complete ledger analytics!' });
+        loadAllData();
+      }
+    } catch (err) {
+      console.error('Reseed error:', err);
+      addToast({ title: 'Failed to load demo data', message: 'Please ensure backend server is running.', type: 'info' });
+    }
+  };
 
   useEffect(() => {
     loadAllData();
@@ -289,8 +311,59 @@ export default function App() {
                 >
                   All Time
                 </button>
+                <div className="h-4 w-px bg-slate-800 mx-1" />
+                <button
+                  onClick={handleLoadDemoData}
+                  className="px-2.5 py-1 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 font-semibold transition-all flex items-center gap-1"
+                  title="Reload or restore sample data"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Restore Demo</span>
+                </button>
               </div>
             </div>
+
+            {/* Offline or Server Warning Banner */}
+            {serverError && (
+              <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in">
+                <div className="flex items-center gap-2.5 text-amber-300">
+                  <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <span>
+                    Backend server not responding on port 5000. Ensure <code>npm run dev</code> or <code>Run-FinAI.bat</code> is running.
+                  </span>
+                </div>
+                <button
+                  onClick={loadAllData}
+                  className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-medium self-end sm:self-auto"
+                >
+                  Retry Connection
+                </button>
+              </div>
+            )}
+
+            {/* Empty Ledger Notice Banner */}
+            {transactions.length === 0 && !loading && !serverError && (
+              <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-100">Your Ledger is Currently Empty ($0.00)</h4>
+                    <p className="text-xs text-slate-400">
+                      Click below to load sample mock transactions, budgets, subscriptions, and goals to visualize your analytics!
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLoadDemoData}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1.5 flex-shrink-0"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Load Sample Demo Data</span>
+                </button>
+              </div>
+            )}
 
             {/* Top Stat Summary Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
