@@ -22,6 +22,38 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
+// Startup & Auto-seed Promise (guarantees DB ready before any route executes)
+let initPromise = null;
+const ensureInitialized = () => {
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        await initSchema();
+        await seedData();
+      } catch (err) {
+        console.error('Database initialization error:', err);
+      }
+    })();
+  }
+  return initPromise;
+};
+
+// Middleware to ensure DB schema & seed are ready on both local and serverless (Vercel)
+app.use(async (req, res, next) => {
+  try {
+    await ensureInitialized();
+    next();
+  } catch (err) {
+    console.error('DB init middleware error:', err);
+    next();
+  }
+});
+
+// Health check ping
+app.get('/api/ping', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString(), platform: 'FinAI Platform Backend' });
+});
+
 // API Routes
 app.use('/api/transactions', transactionsRoutes);
 app.use('/api/budgets', budgetsRoutes);
@@ -33,24 +65,6 @@ app.use('/api/networth', networthRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/settings', settingsRoutes);
 
-app.get('/api/ping', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString(), platform: 'FinAI Platform Backend' });
-});
-
-// Startup & Auto-seed
-let initialized = false;
-const ensureInitialized = async () => {
-  if (!initialized) {
-    try {
-      await initSchema();
-      await seedData();
-      initialized = true;
-    } catch (err) {
-      console.error('Database initialization error:', err);
-    }
-  }
-};
-
 if (!process.env.VERCEL) {
   ensureInitialized().then(() => {
     app.listen(PORT, () => {
@@ -59,12 +73,6 @@ if (!process.env.VERCEL) {
   }).catch((err) => {
     console.error('Failed to start server:', err);
     process.exit(1);
-  });
-} else {
-  // On Vercel serverless, ensure database is initialized on incoming requests
-  app.use(async (req, res, next) => {
-    await ensureInitialized();
-    next();
   });
 }
 

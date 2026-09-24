@@ -3,8 +3,6 @@
   "version": "1.0.0",
   "description": "AI-Powered Personal Finance Platform",
   "scripts": {
-    "postinstall": "npm --prefix server install && npm --prefix client install",
-    "install-all": "npm install && npm --prefix server install && npm --prefix client install",
     "server": "node server/src/index.js",
     "client": "npm --prefix client run dev",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
@@ -17,7 +15,6 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "multer": "^2.4.0",
-    "sqlite3": "^6.0.1",
     "uuid": "^14.0.2"
   }
 }
