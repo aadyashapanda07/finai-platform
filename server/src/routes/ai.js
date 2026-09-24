@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require('../utils/uuid');
 const { parseNaturalLanguage } = require('../services/nlpParser');
 const { scanReceipt, SAMPLE_RECEIPTS } = require('../services/receiptScanner');
 const { calculateFinancialHealth } = require('../services/healthAnalytics');
